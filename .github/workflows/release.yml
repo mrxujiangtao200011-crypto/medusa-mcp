@@ -52,6 +52,14 @@ jobs:
       - name: Install mcp-publisher
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+      - name: Wait until npm serves the new version
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          for i in $(seq 1 40); do
+            npm view "medusa-mcp@$VER" version >/dev/null 2>&1 && exit 0
+            sleep 15
+          done
+          echo "::error::medusa-mcp@$VER is not on npm after 10 minutes"; exit 1
       - run: ./mcp-publisher login github-oidc
       - run: ./mcp-publisher publish
 
