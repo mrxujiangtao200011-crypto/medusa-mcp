@@ -1,7 +1,7 @@
 {
   "name": "medusa",
   "displayName": "Medusa",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Work with a Medusa v2 store: orders, customers, products, inventory, sales reports and safe write actions.",
   "author": {
     "name": "Pavel Trhoň",
@@ -10,11 +10,22 @@
   "homepage": "https://github.com/trhonpavel/medusa-mcp#readme",
   "repository": "https://github.com/trhonpavel/medusa-mcp",
   "license": "MIT",
-  "keywords": ["medusa", "medusajs", "ecommerce", "orders", "inventory", "mcp"],
+  "keywords": [
+    "medusa",
+    "medusajs",
+    "ecommerce",
+    "orders",
+    "inventory",
+    "mcp"
+  ],
   "mcpServers": {
     "medusa": {
       "command": "npx",
-      "args": ["-y", "medusa-mcp@0.1.0", "stdio"],
+      "args": [
+        "-y",
+        "medusa-mcp@0.2.0",
+        "stdio"
+      ],
       "env": {
         "MEDUSA_BACKEND_URL": "${user_config.backend_url}",
         "MEDUSA_API_KEY": "${user_config.api_key}",

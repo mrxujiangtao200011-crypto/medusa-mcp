@@ -5,7 +5,7 @@ import { registerTools } from "./tools.js";
 
 export function createServer(medusa: MedusaClient, cfg: MedusaConfig): McpServer {
   const server = new McpServer(
-    { name: "medusa-mcp", version: "0.1.0" },
+    { name: "medusa-mcp", version: "0.2.0" },
     {
       instructions:
         "Tools for managing a Medusa v2 store. Amounts are in major currency units (49.99 = 49.99 EUR). " +
