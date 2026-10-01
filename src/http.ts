@@ -11,7 +11,7 @@ import { metadataHandler } from "@modelcontextprotocol/sdk/server/auth/handlers/
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { loadHttpConfig, loadMedusaConfig } from "./config.js";
 import { MedusaClient } from "./medusa.js";
-import { OwnerPasswordOAuthProvider, loginPage, withIssuer } from "./oauth.js";
+import { OwnerPasswordOAuthProvider, withIssuer } from "./oauth.js";
 import { createServer } from "./server.js";
 
 export async function startHttp() {
@@ -70,8 +70,7 @@ export async function startHttp() {
       const r = provider.completeLogin(String(pending ?? ""), String(password ?? ""), action === "approve");
       if (r.redirect) return res.redirect(302, r.redirect);
       res.status(r.error === "Wrong password." ? 401 : 400);
-      res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'");
-      res.type("html").send(loginPage(String(pending ?? ""), undefined, undefined, r.error));
+      provider.renderLogin(res, String(pending ?? ""), r.error);
     },
   );
 

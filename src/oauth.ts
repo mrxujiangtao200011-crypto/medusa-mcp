@@ -68,7 +68,7 @@ export class OwnerPasswordOAuthProvider implements OAuthServerProvider {
     readonly issuer: string,
   ) {
     this.store = new FileStore(cfg.dataDir);
-    this.passwordHash = createHash("sha256").update(cfg.ownerPassword).digest();
+    this.passwordHash = createHash("sha256").update(cfg.ownerPassword.trim()).digest();
     setInterval(() => {
       const t = Date.now();
       for (const [k, v] of this.pending) if (t - v.createdAt > 10 * 60_000) this.pending.delete(k);
@@ -107,10 +107,19 @@ export class OwnerPasswordOAuthProvider implements OAuthServerProvider {
   async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
     const id = token();
     this.pending.set(id, { clientId: client.client_id, params, clientName: client.client_name, createdAt: Date.now() });
+    this.renderLogin(res, id);
+  }
+
+  /** Sends the consent page for a pending authorization, optionally with an error. */
+  renderLogin(res: Response, pendingId: string, error?: string) {
+    const p = this.pending.get(pendingId);
+    // Browsers apply form-action to the redirect that follows the form post, so the
+    // client's redirect origin has to be allowed next to 'self'.
+    const formAction = p ? `'self' ${new URL(p.params.redirectUri).origin}` : "'self'";
     res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'");
+    res.setHeader("Content-Security-Policy", `default-src 'none'; style-src 'unsafe-inline'; form-action ${formAction}`);
     res.setHeader("X-Frame-Options", "DENY");
-    res.type("html").send(loginPage(id, client.client_name, params.redirectUri));
+    res.type("html").send(loginPage(pendingId, p?.clientName, p?.params.redirectUri, error));
   }
 
   /** Called from POST /oauth/login. Returns a redirect URL or an error message. */
@@ -124,8 +133,13 @@ export class OwnerPasswordOAuthProvider implements OAuthServerProvider {
       url.searchParams.set("error", "access_denied");
       return { redirect: url.toString() };
     }
-    const given = createHash("sha256").update(password).digest();
-    if (!timingSafeEqual(given, this.passwordHash)) return { error: "Wrong password." };
+    const given = createHash("sha256").update(password.trim()).digest();
+    if (!timingSafeEqual(given, this.passwordHash)) {
+      console.error(
+        `[medusa-mcp] wrong owner password for client "${p.clientName ?? p.clientId}" (${password.trim().length} characters)`,
+      );
+      return { error: "Wrong password." };
+    }
     this.pending.delete(pendingId);
     const code = token();
     this.codes.set(code, { clientId: p.clientId, params: p.params, expiresAt: now() + 300 });
@@ -235,7 +249,7 @@ main{width:100%;max-width:380px;background:var(--card);border:1px solid var(--li
 h1{font-size:20px;margin:0 0 4px}p{margin:0 0 18px;color:var(--muted);font-size:14px}
 code{font-size:13px}label{display:block;font-size:14px;margin-bottom:6px}
 input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:transparent;color:inherit;font-size:16px}
-.row{display:flex;gap:10px;margin-top:18px}button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);font-size:15px;cursor:pointer;background:transparent;color:inherit}
+.row{display:flex;flex-direction:row-reverse;gap:10px;margin-top:18px}button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--line);font-size:15px;cursor:pointer;background:transparent;color:inherit}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}@media (prefers-color-scheme:dark){button.primary{color:#111}}
 .err{color:var(--err);font-size:14px;margin:12px 0 0}
 </style></head><body><main>
@@ -246,6 +260,6 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}@m
 <label for="pw">Owner password</label>
 <input id="pw" name="password" type="password" autocomplete="current-password" autofocus>
 ${error ? `<div class="err">${esc(error)}</div>` : ""}
-<div class="row"><button name="action" value="deny">Deny</button><button class="primary" name="action" value="approve">Allow</button></div>
+<div class="row"><button class="primary" name="action" value="approve">Allow</button><button name="action" value="deny">Deny</button></div>
 </form></main></body></html>`;
 }

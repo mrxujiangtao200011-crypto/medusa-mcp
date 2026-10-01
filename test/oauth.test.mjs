@@ -192,6 +192,32 @@ test("full authorization code + PKCE flow, refresh rotation, revocation of reuse
   assert.equal((await tokenReq(refresh)).status, 400, "old refresh token is invalidated");
 });
 
+test("consent page lets the browser follow the redirect and defaults to Allow", async () => {
+  const client = await (await register([REDIRECT])).json();
+  const u = new URL(`${BASE}/authorize`);
+  for (const [k, v] of Object.entries({
+    response_type: "code",
+    client_id: client.client_id,
+    redirect_uri: REDIRECT,
+    code_challenge: "x".repeat(43),
+    code_challenge_method: "S256",
+  }))
+    u.searchParams.set(k, v);
+  const page = await fetch(u);
+  assert.match(page.headers.get("content-security-policy"), /form-action 'self' https:\/\/claude\.ai(;|$)/);
+  const html = await page.text();
+  assert.ok(html.indexOf('value="approve"') < html.indexOf('value="deny"'), "Enter submits Allow");
+
+  const pending = html.match(/name="pending" value="([^"]+)"/)[1];
+  const wrong = await fetch(`${BASE}/oauth/login`, form({ pending, password: "nope", action: "approve" }));
+  assert.equal(wrong.status, 401);
+  assert.match(wrong.headers.get("content-security-policy"), /form-action 'self' https:\/\/claude\.ai/);
+  assert.match(await wrong.text(), /<strong>Test<\/strong>/, "client name kept after a wrong password");
+
+  const ok = await fetch(`${BASE}/oauth/login`, form({ pending, password: `  ${PASSWORD}\n`, action: "approve" }));
+  assert.equal(ok.status, 302, "surrounding whitespace is ignored");
+});
+
 test("deny redirects with access_denied", async () => {
   const client = await (await register([REDIRECT])).json();
   const { pending } = await authorize(client.client_id);

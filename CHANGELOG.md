@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] – 2026-10-01
+
+### Fixed
+
+- The consent page's `Content-Security-Policy` allowed form submissions only to the server itself, so Chrome blocked the redirect back to the client after a correct password. It now also allows the client's redirect origin.
+- Pressing Enter in the password field submitted **Deny**; **Allow** is now the default button.
+- The owner password ignores surrounding whitespace, and a wrong password is logged with the client name and the length of what was entered (never the value).
+- After a wrong password the consent page kept no client name or redirect host.
+
 ## [0.2.0] – 2026-10-01
 
 ### Added
