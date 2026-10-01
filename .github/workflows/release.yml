@@ -41,10 +41,8 @@ jobs:
       # Trusted publishing (OIDC) needs npm >= 11.5
       - run: npm install -g npm@latest
       - run: npm ci
+      # Trusted publishing (OIDC) – no npm token
       - run: npm publish --provenance --access public
-        env:
-          # Only needed until trusted publishing is configured on npmjs.com
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   docker:
     needs: test
