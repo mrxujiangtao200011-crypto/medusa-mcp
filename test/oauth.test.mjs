@@ -1,0 +1,183 @@
+import { test, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import net from "node:net";
+import { startMockMedusa, MOCK_KEY } from "./mock-medusa.mjs";
+
+const PUBLIC_URL = "https://mcp.example.com";
+const PASSWORD = "correct-horse-battery-staple";
+const STATIC = "static-token-for-tests";
+const REDIRECT = "https://claude.ai/api/mcp/auth_callback";
+
+let mock, proc, BASE, dataDir;
+
+const freePort = () =>
+  new Promise((res) => {
+    const s = net.createServer().listen(0, "127.0.0.1", () => {
+      const { port } = s.address();
+      s.close(() => res(port));
+    });
+  });
+
+before(async () => {
+  mock = await startMockMedusa();
+  const port = await freePort();
+  BASE = `http://127.0.0.1:${port}`;
+  dataDir = mkdtempSync(join(tmpdir(), "medusa-mcp-"));
+  proc = spawn(process.execPath, ["dist/index.js", "http"], {
+    env: {
+      ...process.env,
+      MEDUSA_BACKEND_URL: mock.url,
+      MEDUSA_API_KEY: MOCK_KEY,
+      PUBLIC_URL,
+      OWNER_PASSWORD: PASSWORD,
+      MCP_STATIC_TOKEN: STATIC,
+      PORT: String(port),
+      HOST: "127.0.0.1",
+      DATA_DIR: dataDir,
+    },
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+  for (let i = 0; i < 50; i++) {
+    try {
+      if ((await fetch(`${BASE}/healthz`)).ok) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error("server did not start");
+});
+after(() => {
+  proc?.kill();
+  mock?.server.close();
+  rmSync(dataDir, { recursive: true, force: true });
+});
+
+const form = (o) => ({
+  method: "POST",
+  redirect: "manual",
+  headers: { "content-type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams(o),
+});
+const json = (o) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(o) });
+
+async function mcp(token, body) {
+  const res = await fetch(`${BASE}/mcp`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const line = text.split("\n").find((l) => l.startsWith("data:"));
+  return { status: res.status, headers: res.headers, data: line ? JSON.parse(line.slice(5)) : undefined };
+}
+
+async function register(redirect_uris) {
+  return fetch(
+    `${BASE}/register`,
+    json({ redirect_uris, client_name: "Test", token_endpoint_auth_method: "none", grant_types: ["authorization_code", "refresh_token"] }),
+  );
+}
+
+async function authorize(clientId) {
+  const verifier = randomBytes(32).toString("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const u = new URL(`${BASE}/authorize`);
+  for (const [k, v] of Object.entries({
+    response_type: "code",
+    client_id: clientId,
+    redirect_uri: REDIRECT,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    state: "st4te",
+    resource: `${PUBLIC_URL}/mcp`,
+  }))
+    u.searchParams.set(k, v);
+  const page = await (await fetch(u)).text();
+  const pending = page.match(/name="pending" value="([^"]+)"/)?.[1];
+  return { verifier, pending };
+}
+
+test("unauthenticated /mcp returns 401 with resource metadata", async () => {
+  const r = await mcp(undefined, {});
+  assert.equal(r.status, 401);
+  assert.match(r.headers.get("www-authenticate"), /resource_metadata="https:\/\/mcp\.example\.com\/\.well-known\/oauth-protected-resource\/mcp"/);
+});
+
+test("discovery metadata", async () => {
+  const prm = await (await fetch(`${BASE}/.well-known/oauth-protected-resource/mcp`)).json();
+  assert.equal(prm.resource, `${PUBLIC_URL}/mcp`);
+  const as = await (await fetch(`${BASE}/.well-known/oauth-authorization-server`)).json();
+  assert.ok(as.registration_endpoint);
+  assert.ok(as.code_challenge_methods_supported.includes("S256"));
+});
+
+test("DCR rejects redirect hosts outside the allowlist", async () => {
+  assert.equal((await register(["https://evil.example.net/cb"])).status, 400);
+  assert.equal((await register(["https://claude.ai.evil.net/cb"])).status, 400);
+});
+
+test("full authorization code + PKCE flow, refresh rotation, revocation of reuse", async () => {
+  const client = await (await register([REDIRECT])).json();
+  assert.ok(client.client_id);
+
+  const { verifier, pending } = await authorize(client.client_id);
+  assert.ok(pending, "consent page rendered");
+
+  assert.equal((await fetch(`${BASE}/oauth/login`, form({ pending, password: "nope", action: "approve" }))).status, 401);
+
+  const ok = await fetch(`${BASE}/oauth/login`, form({ pending, password: PASSWORD, action: "approve" }));
+  assert.equal(ok.status, 302);
+  const loc = new URL(ok.headers.get("location"));
+  assert.equal(loc.origin, "https://claude.ai");
+  assert.equal(loc.searchParams.get("state"), "st4te");
+  const code = loc.searchParams.get("code");
+
+  const tokenReq = (params) => fetch(`${BASE}/token`, form(params));
+  const base = { grant_type: "authorization_code", code, client_id: client.client_id, redirect_uri: REDIRECT };
+  assert.equal((await tokenReq({ ...base, code_verifier: "x".repeat(43) })).status, 400, "wrong PKCE verifier");
+  const tok = await (await tokenReq({ ...base, code_verifier: verifier })).json();
+  assert.ok(tok.access_token && tok.refresh_token);
+  assert.equal((await tokenReq({ ...base, code_verifier: verifier })).status, 400, "code is single-use");
+
+  const init = await mcp(tok.access_token, {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } },
+  });
+  assert.equal(init.data.result.serverInfo.name, "medusa-mcp");
+  const call = await mcp(tok.access_token, {
+    jsonrpc: "2.0",
+    id: 2,
+    method: "tools/call",
+    params: { name: "get_store_info", arguments: {} },
+  });
+  assert.match(call.data.result.content[0].text, /sloc_1/);
+
+  const refresh = { grant_type: "refresh_token", refresh_token: tok.refresh_token, client_id: client.client_id };
+  const tok2 = await (await tokenReq(refresh)).json();
+  assert.ok(tok2.access_token);
+  assert.notEqual(tok2.refresh_token, tok.refresh_token);
+  assert.equal((await tokenReq(refresh)).status, 400, "old refresh token is invalidated");
+});
+
+test("deny redirects with access_denied", async () => {
+  const client = await (await register([REDIRECT])).json();
+  const { pending } = await authorize(client.client_id);
+  const r = await fetch(`${BASE}/oauth/login`, form({ pending, action: "deny" }));
+  assert.equal(new URL(r.headers.get("location")).searchParams.get("error"), "access_denied");
+});
+
+test("static token works, random token does not", async () => {
+  const list = { jsonrpc: "2.0", id: 1, method: "tools/list" };
+  assert.equal((await mcp(STATIC, list)).status, 200);
+  assert.equal((await mcp("random", list)).status, 401);
+});

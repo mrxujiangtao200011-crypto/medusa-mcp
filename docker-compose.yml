@@ -1,0 +1,12 @@
+services:
+  medusa-mcp:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:3000:3000"   # ven jen přes reverse proxy s TLS
+    volumes:
+      - mcp-data:/data
+
+volumes:
+  mcp-data:
