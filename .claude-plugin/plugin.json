@@ -1,0 +1,53 @@
+{
+  "name": "medusa",
+  "displayName": "Medusa",
+  "version": "0.1.0",
+  "description": "Work with a Medusa v2 store: orders, customers, products, inventory, sales reports and safe write actions.",
+  "author": {
+    "name": "Pavel Trhoň",
+    "url": "https://github.com/trhonpavel"
+  },
+  "homepage": "https://github.com/trhonpavel/medusa-mcp#readme",
+  "repository": "https://github.com/trhonpavel/medusa-mcp",
+  "license": "MIT",
+  "keywords": ["medusa", "medusajs", "ecommerce", "orders", "inventory", "mcp"],
+  "mcpServers": {
+    "medusa": {
+      "command": "npx",
+      "args": ["-y", "medusa-mcp@0.1.0", "stdio"],
+      "env": {
+        "MEDUSA_BACKEND_URL": "${user_config.backend_url}",
+        "MEDUSA_API_KEY": "${user_config.api_key}",
+        "MEDUSA_READ_ONLY": "${user_config.read_only}",
+        "REPORT_TIMEZONE": "${user_config.report_timezone}"
+      }
+    }
+  },
+  "userConfig": {
+    "backend_url": {
+      "type": "string",
+      "title": "Medusa backend URL",
+      "description": "URL of your Medusa backend, e.g. https://api.example.com",
+      "required": true
+    },
+    "api_key": {
+      "type": "string",
+      "title": "Secret API key",
+      "description": "Medusa Admin → Settings → Developer → Secret API Keys (starts with sk_)",
+      "sensitive": true,
+      "required": true
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read-only",
+      "description": "Only register read and report tools. Turn off to allow fulfilling, shipping, canceling and editing.",
+      "default": true
+    },
+    "report_timezone": {
+      "type": "string",
+      "title": "Reporting timezone",
+      "description": "IANA timezone for date filters and report buckets, e.g. Europe/Prague",
+      "default": "UTC"
+    }
+  }
+}

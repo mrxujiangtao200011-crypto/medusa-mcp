@@ -2,21 +2,25 @@ import express from "express";
 import { rateLimit } from "express-rate-limit";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { mcpAuthRouter, getOAuthProtectedResourceMetadataUrl } from "@modelcontextprotocol/sdk/server/auth/router.js";
+import {
+  mcpAuthRouter,
+  createOAuthMetadata,
+  getOAuthProtectedResourceMetadataUrl,
+} from "@modelcontextprotocol/sdk/server/auth/router.js";
+import { metadataHandler } from "@modelcontextprotocol/sdk/server/auth/handlers/metadata.js";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
 import { loadHttpConfig, loadMedusaConfig } from "./config.js";
 import { MedusaClient } from "./medusa.js";
-import { OwnerPasswordOAuthProvider, loginPage } from "./oauth.js";
+import { OwnerPasswordOAuthProvider, loginPage, withIssuer } from "./oauth.js";
 import { createServer } from "./server.js";
 
 export async function startHttp() {
   const http = loadHttpConfig();
   const mcfg = loadMedusaConfig();
   const medusa = new MedusaClient(mcfg);
-  const provider = new OwnerPasswordOAuthProvider(http);
-
   const base = new URL(http.publicUrl);
   const mcpUrl = new URL("/mcp", base);
+  const provider = new OwnerPasswordOAuthProvider(http, base.href);
 
   const app = express();
   const tp = http.trustProxy;
@@ -25,6 +29,24 @@ export async function startHttp() {
 
   app.get("/healthz", (_req, res) => {
     res.json({ ok: true });
+  });
+
+  // RFC 9207: every authorization response carries `iss`. ChatGPT only uses its stable
+  // redirect URI when the server advertises this. Registered before mcpAuthRouter so it
+  // replaces the SDK's metadata, and the redirect wrapper also covers the SDK's own
+  // error redirects from /authorize.
+  const oauthMetadata = {
+    ...createOAuthMetadata({ provider, issuerUrl: base, scopesSupported: [] }),
+    authorization_response_iss_parameter_supported: true,
+  };
+  app.use("/.well-known/oauth-authorization-server", metadataHandler(oauthMetadata));
+  app.use("/authorize", (_req, res, next) => {
+    const redirect = res.redirect.bind(res) as (status: number, url: string) => void;
+    res.redirect = ((a: number | string, b?: string) => {
+      const [status, url] = typeof a === "number" ? [a, b!] : [302, a];
+      redirect(status, withIssuer(url, provider.issuer));
+    }) as typeof res.redirect;
+    next();
   });
 
   // OAuth: /.well-known/*, /authorize, /token, /register, /revoke

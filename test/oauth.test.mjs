@@ -117,6 +117,28 @@ test("discovery metadata", async () => {
   const as = await (await fetch(`${BASE}/.well-known/oauth-authorization-server`)).json();
   assert.ok(as.registration_endpoint);
   assert.ok(as.code_challenge_methods_supported.includes("S256"));
+  assert.equal(as.issuer, `${PUBLIC_URL}/`);
+  assert.equal(as.authorization_response_iss_parameter_supported, true);
+});
+
+test("DCR accepts ChatGPT redirect URIs", async () => {
+  const r = await register([
+    "https://chatgpt.com/connector_platform_oauth_redirect",
+    "https://chatgpt.com/connector/oauth/abc123",
+  ]);
+  assert.equal(r.status, 201);
+});
+
+test("SDK error redirects from /authorize carry iss", async () => {
+  const client = await (await register([REDIRECT])).json();
+  const u = new URL(`${BASE}/authorize`);
+  for (const [k, v] of Object.entries({ response_type: "code", client_id: client.client_id, redirect_uri: REDIRECT, state: "s" }))
+    u.searchParams.set(k, v);
+  const r = await fetch(u, { redirect: "manual" });
+  assert.equal(r.status, 302);
+  const loc = new URL(r.headers.get("location"));
+  assert.ok(loc.searchParams.get("error"), "missing code_challenge is reported");
+  assert.equal(loc.searchParams.get("iss"), `${PUBLIC_URL}/`);
 });
 
 test("DCR rejects redirect hosts outside the allowlist", async () => {
@@ -138,6 +160,7 @@ test("full authorization code + PKCE flow, refresh rotation, revocation of reuse
   const loc = new URL(ok.headers.get("location"));
   assert.equal(loc.origin, "https://claude.ai");
   assert.equal(loc.searchParams.get("state"), "st4te");
+  assert.equal(loc.searchParams.get("iss"), `${PUBLIC_URL}/`, "RFC 9207 issuer");
   const code = loc.searchParams.get("code");
 
   const tokenReq = (params) => fetch(`${BASE}/token`, form(params));
@@ -173,7 +196,9 @@ test("deny redirects with access_denied", async () => {
   const client = await (await register([REDIRECT])).json();
   const { pending } = await authorize(client.client_id);
   const r = await fetch(`${BASE}/oauth/login`, form({ pending, action: "deny" }));
-  assert.equal(new URL(r.headers.get("location")).searchParams.get("error"), "access_denied");
+  const loc = new URL(r.headers.get("location"));
+  assert.equal(loc.searchParams.get("error"), "access_denied");
+  assert.equal(loc.searchParams.get("iss"), `${PUBLIC_URL}/`);
 });
 
 test("static token works, random token does not", async () => {

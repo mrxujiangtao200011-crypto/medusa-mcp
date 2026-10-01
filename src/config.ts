@@ -48,7 +48,7 @@ export function loadHttpConfig() {
     dataDir: process.env.DATA_DIR ?? "./data",
     /** Hosts OAuth clients may register as redirect (callback) targets. */
     allowedRedirectHosts: (process.env.ALLOWED_REDIRECT_HOSTS ??
-      "claude.ai,claude.com,localhost,127.0.0.1")
+      "claude.ai,claude.com,chatgpt.com,localhost,127.0.0.1")
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),

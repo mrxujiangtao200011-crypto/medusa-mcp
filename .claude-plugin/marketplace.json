@@ -1,0 +1,16 @@
+{
+  "name": "medusa-mcp",
+  "description": "Medusa v2 store tools for Claude",
+  "owner": {
+    "name": "Pavel Trhoň",
+    "url": "https://github.com/trhonpavel"
+  },
+  "plugins": [
+    {
+      "name": "medusa",
+      "source": ".",
+      "category": "ecommerce",
+      "tags": ["medusa", "ecommerce", "orders", "inventory"]
+    }
+  ]
+}

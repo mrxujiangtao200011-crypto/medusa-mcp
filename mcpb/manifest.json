@@ -1,0 +1,68 @@
+{
+  "manifest_version": "0.3",
+  "name": "medusa-mcp",
+  "display_name": "Medusa",
+  "version": "0.0.0",
+  "description": "Orders, customers, products, inventory and sales reports from your Medusa v2 store.",
+  "long_description": "Connects Claude to the Medusa v2 Admin API. Read orders, customers, products and stock, compute sales reports, and – when read-only is off – fulfill, ship, complete or cancel orders and update products, prices and stock. The API key stays on your computer.",
+  "author": {
+    "name": "Pavel Trhoň",
+    "url": "https://github.com/trhonpavel"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trhonpavel/medusa-mcp"
+  },
+  "homepage": "https://github.com/trhonpavel/medusa-mcp#readme",
+  "support": "https://github.com/trhonpavel/medusa-mcp/issues",
+  "license": "MIT",
+  "keywords": ["medusa", "ecommerce", "orders", "inventory"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js", "stdio"],
+      "env": {
+        "MEDUSA_BACKEND_URL": "${user_config.backend_url}",
+        "MEDUSA_API_KEY": "${user_config.api_key}",
+        "MEDUSA_READ_ONLY": "${user_config.read_only}",
+        "REPORT_TIMEZONE": "${user_config.report_timezone}"
+      }
+    }
+  },
+  "tools": [],
+  "user_config": {
+    "backend_url": {
+      "type": "string",
+      "title": "Medusa backend URL",
+      "description": "URL of your Medusa backend, e.g. https://api.example.com",
+      "required": true
+    },
+    "api_key": {
+      "type": "string",
+      "title": "Secret API key",
+      "description": "Medusa Admin → Settings → Developer → Secret API Keys (starts with sk_)",
+      "sensitive": true,
+      "required": true
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read-only",
+      "description": "Only register read and report tools. Turn off to allow fulfilling, shipping, canceling and editing.",
+      "default": true
+    },
+    "report_timezone": {
+      "type": "string",
+      "title": "Reporting timezone",
+      "description": "IANA timezone for date filters and report buckets, e.g. Europe/Prague",
+      "default": "UTC"
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}

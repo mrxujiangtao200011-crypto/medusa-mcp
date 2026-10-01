@@ -62,7 +62,11 @@ export class OwnerPasswordOAuthProvider implements OAuthServerProvider {
   private codes = new Map<string, AuthCode>();
   private passwordHash: Buffer;
 
-  constructor(private cfg: HttpConfig) {
+  constructor(
+    private cfg: HttpConfig,
+    /** Authorization server issuer, exactly as published in the metadata. */
+    readonly issuer: string,
+  ) {
     this.store = new FileStore(cfg.dataDir);
     this.passwordHash = createHash("sha256").update(cfg.ownerPassword).digest();
     setInterval(() => {
@@ -113,7 +117,7 @@ export class OwnerPasswordOAuthProvider implements OAuthServerProvider {
   completeLogin(pendingId: string, password: string, approve: boolean): { redirect?: string; error?: string } {
     const p = this.pending.get(pendingId);
     if (!p) return { error: "This request has expired. Please start connecting again." };
-    const url = new URL(p.params.redirectUri);
+    const url = new URL(withIssuer(p.params.redirectUri, this.issuer));
     if (p.params.state) url.searchParams.set("state", p.params.state);
     if (!approve) {
       this.pending.delete(pendingId);
@@ -211,6 +215,13 @@ export class OwnerPasswordOAuthProvider implements OAuthServerProvider {
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
+/** Adds the RFC 9207 `iss` parameter to an authorization response redirect. */
+export function withIssuer(redirectUrl: string, issuer: string): string {
+  const url = new URL(redirectUrl);
+  url.searchParams.set("iss", issuer);
+  return url.toString();
+}
 
 export function loginPage(pendingId: string, clientName?: string, redirectUri?: string, error?: string) {
   const host = redirectUri ? new URL(redirectUri).host : "";

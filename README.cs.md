@@ -5,7 +5,9 @@
 MCP server pro **Medusa v2 Admin API**. Běží dvěma způsoby:
 
 - **stdio** – lokálně pro Claude Desktop / Claude Code, bez sítě navenek
-- **HTTP (Streamable HTTP) + OAuth 2.1** – jako vlastní konektor v Claude (web, mobil, desktop)
+- **HTTP (Streamable HTTP) + OAuth 2.1** – jako remote konektor pro Claude (web, mobil, desktop) a ChatGPT
+
+Je k dispozici i jako **plugin pro Claude Code / Cowork** se skilly a jako **rozšíření pro Claude Desktop** (`.mcpb`) k instalaci jedním klikem.
 
 ## Tooly
 
@@ -35,6 +37,24 @@ S `MEDUSA_READ_ONLY=true` se zápisové tooly vůbec nezaregistrují.
 V Medusa Adminu: **Settings → Developer → Secret API Keys → Create**. Klíč (`sk_…`) má práva uživatele, který ho vytvořil – ideálně si na to založ samostatného admin uživatele, ať jde klíč kdykoliv revokovat bez dopadu na tvůj účet.
 
 ## 2. Lokálně (stdio)
+
+### Plugin pro Claude Code / Cowork
+
+```bash
+claude plugin marketplace add trhonpavel/medusa-mcp
+claude plugin install medusa@medusa-mcp
+```
+
+Při zapnutí pluginu se Claude Code zeptá na URL backendu a API klíč (klíč se uloží do systémové klíčenky). Zapisovací nástroje jsou vypnuté, dokud v `/config` nevypneš **Read-only**. Plugin přidává dva skilly:
+
+- `store-briefing` – včerejší prodeje a prodeje od začátku měsíce, zaplacené objednávky čekající na odeslání, docházející zboží
+- `fulfill-orders` – vyřízení zaplacených objednávek a doplnění trackingu, až po tvém potvrzení seznamu
+
+### Rozšíření pro Claude Desktop
+
+Stáhni `medusa-mcp-<verze>.mcpb` z [posledního release](https://github.com/trhonpavel/medusa-mcp/releases/latest) a otevři ho, nebo ho přetáhni do **Settings → Extensions**. Claude Desktop se zeptá na stejná nastavení a spustí server ve vestavěném Node.js. Sestavit ho můžeš i sám přes `npm run build:mcpb`.
+
+### Ruční konfigurace
 
 Claude Desktop – `claude_desktop_config.json`:
 
@@ -84,6 +104,12 @@ mcp.example.com {
 ```
 
 V Claude pak přidej vlastní konektor s URL **`https://mcp.example.com/mcp`**. Claude se sám zaregistruje (DCR), otevře přihlašovací stránku, tam zadáš `OWNER_PASSWORD` a povolíš přístup.
+
+### ChatGPT
+
+V ChatGPT zapni v nastavení **developer mode** a vytvoř aplikaci (konektor) s URL MCP serveru **`https://mcp.example.com/mcp`** a autentizací OAuth. ChatGPT se zaregistruje stejně a přesměrovává na `chatgpt.com`, který je ve výchozím `ALLOWED_REDIRECT_HOSTS`. Server vrací parametr `iss` podle RFC 9207, takže ChatGPT použije svou stabilní callback URL.
+
+### Claude Code
 
 Claude Code proti remote serveru se statickým tokenem (`MCP_STATIC_TOKEN`):
 

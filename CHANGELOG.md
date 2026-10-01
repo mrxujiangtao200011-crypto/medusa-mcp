@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `delete_product` with a `confirm_title` safeguard; also removes the variants' unreserved inventory items.
+- ChatGPT as a remote connector: `chatgpt.com` is in the default `ALLOWED_REDIRECT_HOSTS`, and authorization responses carry the RFC 9207 `iss` parameter (advertised as `authorization_response_iss_parameter_supported`).
+- Claude Code / Cowork plugin (`.claude-plugin/`) with `store-briefing` and `fulfill-orders` skills; the repository is its own plugin marketplace.
+- Claude Desktop extension: `npm run build:mcpb` builds `medusa-mcp-<version>.mcpb`, and releases attach it.
+
 ## [0.1.0] – 2026-10-01
 
 ### Added

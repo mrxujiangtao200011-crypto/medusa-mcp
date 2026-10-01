@@ -7,7 +7,9 @@ An [MCP](https://modelcontextprotocol.io) server for the **Medusa v2 Admin API**
 It runs in two modes:
 
 - **stdio** – locally for Claude Desktop, Claude Code and other MCP clients
-- **Streamable HTTP + OAuth 2.1** – as a remote custom connector you can use from Claude on the web, desktop and mobile
+- **Streamable HTTP + OAuth 2.1** – as a remote connector for Claude (web, desktop, mobile) and ChatGPT
+
+It also ships as a **Claude Code / Cowork plugin** with skills and as a one-click **Claude Desktop extension** (`.mcpb`).
 
 ## Tools
 
@@ -37,6 +39,24 @@ With `MEDUSA_READ_ONLY=true` the write tools are not registered at all.
 In the Medusa Admin go to **Settings → Developer → Secret API Keys → Create**. The key (`sk_…`) acts with the permissions of the user who created it, so consider a dedicated admin user that you can revoke independently.
 
 ## 2. Local use (stdio)
+
+### Claude Code / Cowork plugin
+
+```bash
+claude plugin marketplace add trhonpavel/medusa-mcp
+claude plugin install medusa@medusa-mcp
+```
+
+Claude Code asks for the backend URL and the API key when you enable the plugin (the key goes to the system keychain). Write tools stay off until you turn off **Read-only** in `/config`. The plugin adds two skills:
+
+- `store-briefing` – yesterday's and month-to-date sales, paid orders waiting to ship, low stock
+- `fulfill-orders` – fulfill paid orders and add tracking numbers, after you confirm the list
+
+### Claude Desktop extension
+
+Download `medusa-mcp-<version>.mcpb` from the [latest release](https://github.com/trhonpavel/medusa-mcp/releases/latest) and open it, or drag it to **Settings → Extensions**. Claude Desktop asks for the same settings and runs the server with its bundled Node.js. Build it yourself with `npm run build:mcpb`.
+
+### Manual configuration
 
 Claude Desktop – `claude_desktop_config.json`:
 
@@ -87,6 +107,12 @@ mcp.example.com {
 
 Then add a custom connector in Claude with the URL **`https://mcp.example.com/mcp`**. Claude registers itself (Dynamic Client Registration), opens the consent page, you enter `OWNER_PASSWORD` and click Allow.
 
+### ChatGPT
+
+In ChatGPT turn on **developer mode** in the settings, then create an app (connector) with the MCP server URL **`https://mcp.example.com/mcp`** and OAuth authentication. ChatGPT registers itself the same way and redirects to `chatgpt.com`, which is in the default `ALLOWED_REDIRECT_HOSTS`. The server returns the RFC 9207 `iss` parameter, so ChatGPT uses its stable callback URL.
+
+### Claude Code
+
 Claude Code can use the same OAuth flow, or a static token if you set `MCP_STATIC_TOKEN`:
 
 ```bash
@@ -106,7 +132,7 @@ claude mcp add --transport http medusa https://mcp.example.com/mcp \
 | `PUBLIC_URL` | HTTP | | Public HTTPS origin of this server (without `/mcp`) |
 | `OWNER_PASSWORD` | HTTP | | Password required on the consent page |
 | `MCP_STATIC_TOKEN` | | | Optional static bearer token |
-| `ALLOWED_REDIRECT_HOSTS` | | `claude.ai,claude.com,localhost,127.0.0.1` | Hosts OAuth clients may use as redirect targets |
+| `ALLOWED_REDIRECT_HOSTS` | | `claude.ai,claude.com,chatgpt.com,localhost,127.0.0.1` | Hosts OAuth clients may use as redirect targets |
 | `TRUST_PROXY` | | `1` | Express `trust proxy` – number of proxies in front |
 | `PORT` / `HOST` | | `3000` / `0.0.0.0` | Listen address |
 | `DATA_DIR` | | `./data` | Where OAuth clients and token hashes are stored |
