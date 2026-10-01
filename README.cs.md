@@ -23,6 +23,7 @@ MCP server pro **Medusa v2 Admin API**. Běží dvěma způsoby:
 | `complete_order` | dokončit objednávku | zápis |
 | `cancel_order` | zrušit objednávku (`destructiveHint`) | zápis |
 | `update_product` | název, popis, stav publikace, handle, metadata | zápis |
+| `delete_product` | smazat produkt s variantami a jejich nerezervované skladové položky; vyžaduje `confirm_title` (`destructiveHint`) | zápis |
 | `set_variant_price` | cena varianty v měně – ostatní ceny (i s pravidly) zůstanou | zápis |
 | `set_stock_level` | naskladnění: absolutně nebo `adjust_by` ±, podle SKU | zápis |
 
@@ -114,7 +115,7 @@ Hlášení zranitelností viz [SECURITY.md](SECURITY.md).
 - DCR povoluje jen redirecty na hosty z `ALLOWED_REDIRECT_HOSTS` – cizí aplikace se nemůže zaregistrovat s vlastním callbackem.
 - Autorizační kódy jsou jednorázové, platí 5 minut, PKCE S256 je povinné.
 - Přihlašovací stránka: CSP `default-src 'none'`, `X-Frame-Options: DENY`, porovnání hesla v konstantním čase.
-- `cancel_order` má `destructiveHint`, zápisové tooly nejsou `readOnlyHint` – Claude u nich žádá o schválení.
+- `cancel_order` a `delete_product` mají `destructiveHint`, zápisové tooly nejsou `readOnlyHint` – Claude u nich žádá o schválení.
 - `TRUST_PROXY` nastav na počet proxy před serverem, jinak rate limit uvidí jen IP proxy.
 
 ## Vývoj

@@ -85,6 +85,9 @@ export class MedusaClient {
   post<T = any>(path: string, body?: unknown, query?: Record<string, QueryValue>) {
     return this.request<T>("POST", path, { body: body ?? {}, query });
   }
+  delete<T = any>(path: string) {
+    return this.request<T>("DELETE", path);
+  }
 
   /** Walks all pages of a list endpoint (capped at maxItems). */
   async listAll<T = any>(

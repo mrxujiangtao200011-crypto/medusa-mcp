@@ -857,6 +857,67 @@ export function registerTools(server: McpServer, medusa: MedusaClient, cfg: Medu
   );
 
   server.registerTool(
+    "delete_product",
+    {
+      title: "Delete product",
+      description:
+        "DELETES the product with all its variants. Irreversible – get explicit confirmation from the user before calling. " +
+        "'confirm_title' must match the product title exactly. By default the inventory items of its variants are deleted too " +
+        "(only those with nothing reserved).",
+      inputSchema: {
+        product_id: z.string(),
+        confirm_title: z.string().describe("The exact product title, as a safeguard against deleting the wrong product"),
+        delete_inventory_items: z.boolean().default(true),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    },
+    wrap(async (a) => {
+      const p = (
+        await medusa.get(`/admin/products/${a.product_id}`, {
+          fields: "id,title,handle,status,*variants,*variants.inventory_items",
+        })
+      ).product;
+      if (p.title !== a.confirm_title)
+        throw new Error(`confirm_title does not match – the product is titled "${p.title}".`);
+      const inventoryItemIds = [
+        ...new Set<string>(
+          (p.variants ?? []).flatMap((v: any) => (v.inventory_items ?? []).map((i: any) => i.inventory_item_id)),
+        ),
+      ].filter(Boolean);
+
+      await medusa.delete(`/admin/products/${p.id}`);
+
+      const inventory: { id: string; sku?: string; result: string }[] = [];
+      if (a.delete_inventory_items) {
+        for (const id of inventoryItemIds) {
+          let item: any;
+          try {
+            item = (await medusa.get(`/admin/inventory-items/${id}`, { fields: "id,sku,reserved_quantity" })).inventory_item;
+          } catch (e) {
+            if (e instanceof MedusaError && e.status === 404) {
+              inventory.push({ id, result: "already deleted" });
+              continue;
+            }
+            throw e;
+          }
+          if (Number(item.reserved_quantity ?? 0) > 0) {
+            inventory.push({ id, sku: item.sku, result: `kept – ${item.reserved_quantity} reserved` });
+            continue;
+          }
+          await medusa.delete(`/admin/inventory-items/${id}`);
+          inventory.push({ id, sku: item.sku, result: "deleted" });
+        }
+      }
+      return {
+        ok: true,
+        deleted_product: { id: p.id, title: p.title, handle: p.handle, status: p.status },
+        variants_deleted: (p.variants ?? []).map((v: any) => ({ id: v.id, sku: v.sku })),
+        inventory_items: a.delete_inventory_items ? inventory : inventoryItemIds.map((id) => ({ id, result: "kept" })),
+      };
+    }),
+  );
+
+  server.registerTool(
     "set_variant_price",
     {
       title: "Set variant price",

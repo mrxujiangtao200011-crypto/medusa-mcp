@@ -37,6 +37,7 @@ const state = {
   inv: [
     { id: "iitem_1", sku: "BALL-1", title: "Ball", location_levels: [{ location_id: "sloc_1", stocked_quantity: 10, reserved_quantity: 2, available_quantity: 8 }] },
     { id: "iitem_2", sku: "NET-1", title: "Net", location_levels: [{ location_id: "sloc_1", stocked_quantity: 1, reserved_quantity: 1, available_quantity: 0 }] },
+    { id: "iitem_del", sku: "DEL-1", title: "Test product", reserved_quantity: 0, location_levels: [{ location_id: "sloc_1", stocked_quantity: 5, reserved_quantity: 0, available_quantity: 5 }] },
   ],
 };
 
@@ -88,6 +89,18 @@ const server = http.createServer(async (req, res) => {
   if (p === "/admin/customers/cus_1") return send(res, 200, { customer: { id: "cus_1", email: "jan@example.com", addresses: [], groups: [] } });
   if (p === "/admin/products") return send(res, 200, { products: [{ id: "prod_1", title: "Roundnet ball", handle: "ball", status: "published", variants: [{ id: "variant_1", title: "Default", sku: "BALL-1" }] }], count: 1, offset: 0 });
   if (p === "/admin/products/prod_1") return send(res, 200, { product: { id: "prod_1", title: "Roundnet ball", status: "published", variants: [{ ...state.variant, inventory_items: [{ inventory_item_id: "iitem_1" }] }] } });
+  if (p === "/admin/products/prod_del") {
+    if (req.method === "DELETE") { state.productDeleted = true; return send(res, 200, { id: "prod_del", object: "product", deleted: true }); }
+    if (state.productDeleted) return send(res, 404, { message: "Product with id: prod_del was not found" });
+    return send(res, 200, { product: { id: "prod_del", title: "Test product", handle: "test-product", status: "draft",
+      variants: [{ id: "variant_del", sku: "DEL-1", inventory_items: [{ inventory_item_id: "iitem_del" }] }] } });
+  }
+  if ((m = p.match(/^\/admin\/inventory-items\/([^/]+)$/))) {
+    const i = state.inv.findIndex(x => x.id === m[1]);
+    if (i < 0) return send(res, 404, { message: "Inventory item not found" });
+    if (req.method === "DELETE") { state.inv.splice(i, 1); return send(res, 200, { id: m[1], deleted: true }); }
+    return send(res, 200, { inventory_item: state.inv[i] });
+  }
   if (p === "/admin/stock-locations") return send(res, 200, { stock_locations: [{ id: "sloc_1", name: "Main warehouse", address: { city: "Main warehouse", country_code: "cz" } }], count: 1 });
   if (p === "/admin/regions") return send(res, 200, { regions: [{ id: "reg_1", name: "Czechia", currency_code: "czk", countries: [{ iso_2: "cz" }] }] });
   if (p === "/admin/sales-channels") return send(res, 200, { sales_channels: [{ id: "sc_1", name: "Web" }] });

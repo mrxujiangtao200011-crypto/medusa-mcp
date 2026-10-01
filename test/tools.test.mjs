@@ -30,12 +30,13 @@ async function call(name, args = {}) {
 }
 const lastRequest = (pred) => [...mock.log].reverse().find(pred);
 
-test("registers all 16 tools with correct annotations", async () => {
+test("registers all 17 tools with correct annotations", async () => {
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 16);
+  assert.equal(tools.length, 17);
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.equal(byName.get_order.annotations.readOnlyHint, true);
   assert.equal(byName.cancel_order.annotations.destructiveHint, true);
+  assert.equal(byName.delete_product.annotations.destructiveHint, true);
 });
 
 test("sends Basic auth with the secret key", async () => {
@@ -122,6 +123,19 @@ test("set_stock_level adjusts relatively and refuses negative stock", async () =
   const untracked = await call("set_stock_level", { sku: "NO-INVENTORY", adjust_by: 1 });
   assert.equal(untracked.isError, true);
   assert.match(untracked.text, /manage_inventory/);
+});
+
+test("delete_product requires a matching title and removes the inventory item", async () => {
+  const wrong = await call("delete_product", { product_id: "prod_del", confirm_title: "Something else" });
+  assert.equal(wrong.isError, true);
+  assert.match(wrong.text, /confirm_title does not match/);
+  assert.equal(mock.state.productDeleted, undefined);
+
+  const r = await call("delete_product", { product_id: "prod_del", confirm_title: "Test product" });
+  assert.equal(r.isError, false);
+  assert.equal(mock.state.productDeleted, true);
+  assert.deepEqual(r.data.inventory_items, [{ id: "iitem_del", sku: "DEL-1", result: "deleted" }]);
+  assert.ok(!mock.state.inv.some((i) => i.id === "iitem_del"));
 });
 
 test("read-only mode hides write tools", async () => {

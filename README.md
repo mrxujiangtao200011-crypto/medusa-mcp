@@ -25,6 +25,7 @@ It runs in two modes:
 | `complete_order` | mark an order as completed | write |
 | `cancel_order` | cancel an order (`destructiveHint`) | write |
 | `update_product` | title, description, status, handle, metadata | write |
+| `delete_product` | delete a product and its variants, plus their unreserved inventory items; requires `confirm_title` (`destructiveHint`) | write |
 | `set_variant_price` | set a variant's base price in one currency – all other prices, including ones with price rules, are preserved | write |
 | `set_stock_level` | restock by SKU, absolute or relative (`adjust_by: +10`) | write |
 
@@ -129,7 +130,7 @@ claude mcp add --transport http medusa https://mcp.example.com/mcp \
 - Dynamic Client Registration only accepts redirect URIs on `ALLOWED_REDIRECT_HOSTS`, so an arbitrary app cannot register its own callback and phish a token.
 - Authorization codes are single-use, expire after 5 minutes, and PKCE S256 is mandatory.
 - The consent page sends `Content-Security-Policy: default-src 'none'` and `X-Frame-Options: DENY`, and compares the password in constant time.
-- Write tools are not marked `readOnlyHint` and `cancel_order` carries `destructiveHint`, so clients like Claude ask for approval before running them.
+- Write tools are not marked `readOnlyHint` and `cancel_order` / `delete_product` carry `destructiveHint`, so clients like Claude ask for approval before running them.
 - Set `TRUST_PROXY` to the number of reverse proxies in front of the server, otherwise rate limiting only sees the proxy's IP.
 
 See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
