@@ -1,7 +1,7 @@
 {
   "name": "medusa",
   "displayName": "Medusa",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Work with a Medusa v2 store: orders, customers, products, inventory, sales reports and safe write actions.",
   "author": {
     "name": "Pavel Trhoň",
@@ -23,7 +23,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "medusa-mcp@0.2.1",
+        "medusa-mcp@0.2.2",
         "stdio"
       ],
       "env": {

@@ -44,6 +44,17 @@ jobs:
       # Trusted publishing (OIDC) – no npm token
       - run: npm publish --provenance --access public
 
+  mcp-registry:
+    needs: npm   # the registry checks mcpName in the published npm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish
+
   docker:
     needs: test
     runs-on: ubuntu-latest

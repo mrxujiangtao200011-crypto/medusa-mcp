@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.2] – 2026-10-01
+
+### Added
+
+- Listing in the official MCP Registry as `io.github.trhonpavel/medusa-mcp` (`server.json`, `mcpName`); releases publish it via GitHub OIDC.
+
+### Changed
+
+- npm releases use trusted publishing only (no npm token).
+
 ## [0.2.1] – 2026-10-01
 
 ### Fixed

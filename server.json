@@ -1,0 +1,49 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.trhonpavel/medusa-mcp",
+  "title": "Medusa",
+  "description": "Medusa v2 store: orders, customers, products, inventory, sales reports and safe write actions.",
+  "repository": {
+    "url": "https://github.com/trhonpavel/medusa-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/trhonpavel/medusa-mcp#readme",
+  "version": "0.2.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "medusa-mcp",
+      "version": "0.2.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MEDUSA_BACKEND_URL",
+          "description": "URL of your Medusa backend, e.g. https://api.example.com",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "MEDUSA_API_KEY",
+          "description": "Secret API key from Medusa Admin → Settings → Developer → Secret API Keys (sk_…)",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "MEDUSA_READ_ONLY",
+          "description": "true = register read and report tools only",
+          "format": "boolean",
+          "default": "false"
+        },
+        {
+          "name": "REPORT_TIMEZONE",
+          "description": "IANA timezone for date filters and report buckets, e.g. Europe/Prague",
+          "format": "string",
+          "default": "UTC"
+        }
+      ]
+    }
+  ]
+}

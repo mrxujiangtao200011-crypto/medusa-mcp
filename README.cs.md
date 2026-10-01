@@ -7,7 +7,7 @@ MCP server pro **Medusa v2 Admin API**. Běží dvěma způsoby:
 - **stdio** – lokálně pro Claude Desktop / Claude Code, bez sítě navenek
 - **HTTP (Streamable HTTP) + OAuth 2.1** – jako remote konektor pro Claude (web, mobil, desktop) a ChatGPT
 
-Je k dispozici i jako **plugin pro Claude Code / Cowork** se skilly a jako **rozšíření pro Claude Desktop** (`.mcpb`) k instalaci jedním klikem.
+Je v [MCP Registry](https://registry.modelcontextprotocol.io) jako `io.github.trhonpavel/medusa-mcp` a je k dispozici i jako **plugin pro Claude Code / Cowork** se skilly a jako **rozšíření pro Claude Desktop** (`.mcpb`) k instalaci jedním klikem.
 
 ## Tooly
 

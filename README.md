@@ -9,7 +9,7 @@ It runs in two modes:
 - **stdio** – locally for Claude Desktop, Claude Code and other MCP clients
 - **Streamable HTTP + OAuth 2.1** – as a remote connector for Claude (web, desktop, mobile) and ChatGPT
 
-It also ships as a **Claude Code / Cowork plugin** with skills and as a one-click **Claude Desktop extension** (`.mcpb`).
+It is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.trhonpavel/medusa-mcp`, and also ships as a **Claude Code / Cowork plugin** with skills and as a one-click **Claude Desktop extension** (`.mcpb`).
 
 ## Tools
 
