@@ -1,11 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { MedusaConfig } from "./config.js";
 import type { MedusaClient } from "./medusa.js";
-import { registerTools } from "./tools.js";
+import { registerTools } from "./tools/index.js";
 
 export function createServer(medusa: MedusaClient, cfg: MedusaConfig): McpServer {
   const server = new McpServer(
-    { name: "medusa-mcp", version: "0.2.2" },
+    { name: "medusa-mcp", version: "0.3.0" },
     {
       instructions:
         "Tools for managing a Medusa v2 store. Amounts are in major currency units (49.99 = 49.99 EUR). " +

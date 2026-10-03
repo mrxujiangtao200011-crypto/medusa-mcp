@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://github.com/trhonpavel/medusa-mcp#readme",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "medusa-mcp",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       },

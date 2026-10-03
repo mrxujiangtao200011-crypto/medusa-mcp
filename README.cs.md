@@ -11,26 +11,48 @@ Je v [MCP Registry](https://registry.modelcontextprotocol.io) jako `io.github.tr
 
 ## Tooly
 
-| Tool | Co dělá | Typ |
-|---|---|---|
-| `get_store_info` | regiony a měny, prodejní kanály, sklady | čtení |
-| `list_orders` | objednávky – fulltext, datum, zákazník, stav, stav platby/vyřízení | čtení |
-| `get_order` | detail objednávky podle ID nebo čísla (`1042`, `#1042`) | čtení |
-| `list_customers` / `get_customer` | zákazníci, historie, útrata | čtení |
-| `list_products` / `get_product` | produkty, varianty, ceny, propojené skladové položky | čtení |
-| `list_inventory` | stav skladu po skladech, `low_stock_threshold` pro dochází | čtení |
-| `sales_report` | obrat, AOV, kusy, zákazníci, časová řada den/týden/měsíc, top produkty | report |
-| `create_fulfillment` | vychystání objednávky (default vše zbývající, jediný sklad) | zápis |
-| `create_shipment` | odesláno + sledovací číslo | zápis |
-| `complete_order` | dokončit objednávku | zápis |
-| `cancel_order` | zrušit objednávku (`destructiveHint`) | zápis |
-| `update_product` | název, popis, stav publikace, handle, metadata | zápis |
-| `delete_product` | smazat produkt s variantami a jejich nerezervované skladové položky; vyžaduje `confirm_title` (`destructiveHint`) | zápis |
-| `set_variant_price` | cena varianty v měně – ostatní ceny (i s pravidly) zůstanou | zápis |
-| `set_stock_level` | naskladnění: absolutně nebo `adjust_by` ±, podle SKU | zápis |
+48 toolů na běžnou správu obchodu. Cokoli dalšího jde přes `medusa_request`.
 
-Částky jsou v hlavních jednotkách měny (Medusa v2 neukládá haléře). Data ve filtrech (`2026-09-01`) se berou v `REPORT_TIMEZONE` (výchozí `UTC`, pro ČR nastav `Europe/Prague`).
-S `MEDUSA_READ_ONLY=true` se zápisové tooly vůbec nezaregistrují.
+**Čtení a reporty**
+
+| Tool | Co dělá |
+|---|---|
+| `get_store_info` | regiony a měny, prodejní kanály, sklady, způsoby dopravy a profily, důvody vratek a refundací |
+| `list_orders` / `get_order` | objednávky podle fulltextu, data, zákazníka nebo stavu; detail podle ID nebo čísla (`1042`, `#1042`) včetně plateb, refundací a vratek |
+| `list_customers` / `get_customer` | zákazníci (i podle skupiny), historie, útrata |
+| `list_customer_groups` | zákaznické skupiny |
+| `list_products` / `get_product` | produkty podle stavu, kolekce, kategorie nebo tagu; varianty, možnosti, ceny, skladové položky |
+| `list_catalog` | kategorie (strom), kolekce, tagy, typy produktů |
+| `list_inventory` | stav skladu po skladech, `low_stock_threshold` pro dochází |
+| `list_promotions` | slevové kódy s hodnotou, podmínkami, využitím a platností |
+| `list_price_lists` | akční a skupinové ceníky včetně cen |
+| `sales_report` | obrat, AOV, kusy, zákazníci, časová řada den/týden/měsíc, top produkty |
+
+**Zápis** (s `MEDUSA_READ_ONLY=true` se nezaregistrují)
+
+| Oblast | Tooly |
+|---|---|
+| Vyřízení | `create_fulfillment` (default vše zbývající, jediný sklad), `create_shipment` (sledovací číslo), `mark_delivered`, `cancel_fulfillment` |
+| Objednávky | `update_order` (e-mail, adresy, metadata), `complete_order`, `cancel_order` |
+| Platby | `mark_order_paid` (převod, dobírka), `capture_payment`, `refund_payment` (hlídá vratnou částku) |
+| Vratky | `create_return` (default vše odeslané), `receive_return` (vrátí zboží na sklad) |
+| Koncepty objednávek | `create_draft_order` (položky podle varianty nebo SKU, vlastní ceny, doprava), `convert_draft_order` |
+| Produkty | `create_product` (jednoduchý nebo s možnostmi a variantami, počáteční sklad, výchozí kanál a profil dopravy), `update_product`, `delete_product` (vyžaduje `confirm_title`) |
+| Varianty | `create_variant` (nové hodnoty možností doplní sám), `update_variant`, `delete_variant` (vyžaduje `confirm`), `set_variant_price` (ostatní ceny zůstanou) |
+| Katalog | `save_category`, `delete_category`, `save_collection`, `delete_collection` (založení/úprava, přidání a odebrání produktů) |
+| Sklad | `set_stock_level` (absolutně nebo `adjust_by: +10`, umí přidat položku na nový sklad) |
+| Zákazníci | `save_customer` (založení/úprava, adresa, skupiny), `save_customer_group`, `delete_customer_group` |
+| Promo akce | `create_promotion` (procenta, částka nebo doprava zdarma; produkty, kategorie, kolekce, skupiny; platnost a limit použití), `update_promotion`, `delete_promotion` |
+| Ceníky | `save_price_list` (akční a B2B ceny, ceny podle varianty nebo SKU), `delete_price_list` |
+
+**Obecný přístup**
+
+| Tool | Co dělá |
+|---|---|
+| `medusa_request` | libovolný endpoint Admin API (`GET`, `POST`, `DELETE` pod `/admin/`) pro věci bez vlastního toolu – rezervace, úpravy objednávek, výměny, daňové sazby… V read-only režimu jen `GET`; zápis do `api-keys`, `users` a `invites` je vždy zablokovaný. Vypíná se `MEDUSA_RAW_API=false`. |
+
+Částky jsou v hlavních jednotkách měny (Medusa v2 neukládá haléře). Data (`2026-09-01`) se berou v `REPORT_TIMEZONE` (výchozí `UTC`, pro ČR nastav `Europe/Prague`).
+Destruktivní tooly (zrušení, mazání, refundace, stržení platby, `medusa_request`) mají `destructiveHint`, takže se klient před spuštěním zeptá.
 
 ## 1. API klíč v Meduse
 
@@ -141,7 +163,8 @@ Hlášení zranitelností viz [SECURITY.md](SECURITY.md).
 - DCR povoluje jen redirecty na hosty z `ALLOWED_REDIRECT_HOSTS` – cizí aplikace se nemůže zaregistrovat s vlastním callbackem.
 - Autorizační kódy jsou jednorázové, platí 5 minut, PKCE S256 je povinné.
 - Přihlašovací stránka: CSP `default-src 'none'`, `X-Frame-Options: DENY`, porovnání hesla v konstantním čase.
-- `cancel_order` a `delete_product` mají `destructiveHint`, zápisové tooly nejsou `readOnlyHint` – Claude u nich žádá o schválení.
+- Zápisové tooly nejsou `readOnlyHint` a ty, které ruší, mažou nebo hýbou penězi, mají `destructiveHint` – Claude u nich žádá o schválení.
+- `medusa_request` dosáhne jen na cesty `/admin/…`, nikdy nezapisuje do `api-keys`, `users` ani `invites` (prompt injection tak nevyrobí nové přístupy) a jde vypnout přes `MEDUSA_RAW_API=false`.
 - `TRUST_PROXY` nastav na počet proxy před serverem, jinak rate limit uvidí jen IP proxy.
 
 ## Vývoj

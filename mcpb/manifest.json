@@ -3,8 +3,8 @@
   "name": "medusa-mcp",
   "display_name": "Medusa",
   "version": "0.0.0",
-  "description": "Orders, customers, products, inventory and sales reports from your Medusa v2 store.",
-  "long_description": "Connects Claude to the Medusa v2 Admin API. Read orders, customers, products and stock, compute sales reports, and – when read-only is off – fulfill, ship, complete or cancel orders and update products, prices and stock. The API key stays on your computer.",
+  "description": "Manage your Medusa v2 store – orders, payments, returns, products, catalog, inventory, promotions, price lists and sales reports.",
+  "long_description": "Connects Claude to the Medusa v2 Admin API. Read orders, customers, products and stock, compute sales reports, and – when read-only is off – fulfill and ship orders, record payments and refunds, handle returns, create draft orders, create and edit products, variants, categories and collections, run promotions and price lists, and adjust stock. Any other Admin API endpoint is reachable through a generic request tool. The API key stays on your computer.",
   "author": {
     "name": "Pavel Trhoň",
     "url": "https://github.com/trhonpavel"
@@ -49,7 +49,7 @@
     "read_only": {
       "type": "boolean",
       "title": "Read-only",
-      "description": "Only register read and report tools. Turn off to allow fulfilling, shipping, canceling and editing.",
+      "description": "Only register read and report tools. Turn off to allow fulfilling, refunding, editing products, promotions and more.",
       "default": true
     },
     "report_timezone": {

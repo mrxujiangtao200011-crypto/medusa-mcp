@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] – 2026-10-03
+
+### Added
+
+- 31 new tools – the server now covers day-to-day store management:
+  - Fulfillment: `mark_delivered`, `cancel_fulfillment`.
+  - Orders and payments: `update_order`, `mark_order_paid`, `capture_payment`, `refund_payment`.
+  - Returns: `create_return`, `receive_return`.
+  - Draft orders: `create_draft_order`, `convert_draft_order`.
+  - Products: `create_product` (simple or with options and variants, initial stock), `create_variant`, `update_variant`, `delete_variant`.
+  - Catalog: `list_catalog`, `save_category`, `delete_category`, `save_collection`, `delete_collection`.
+  - Customers: `save_customer`, `list_customer_groups`, `save_customer_group`, `delete_customer_group`.
+  - Promotions: `list_promotions`, `create_promotion`, `update_promotion`, `delete_promotion`.
+  - Price lists: `list_price_lists`, `save_price_list`, `delete_price_list`.
+  - `medusa_request` for any other Admin API endpoint (GET only in read-only mode, never writes to `api-keys`, `users` or `invites`; disable with `MEDUSA_RAW_API=false`).
+- `get_order` shows individual payments with captures, refunds and the refundable amount, plus returns.
+- `get_store_info` lists shipping options and profiles, return reasons and refund reasons.
+- `get_product` shows option values per variant, images, sales channels and the shipping profile.
+- `update_product` can change images, collection, categories, tags, sales channels, shipping profile, discountable and weight.
+- `set_stock_level` adds the item to a stock location where it is not stocked yet.
+- `list_customers` filters by customer group, `list_products` by tag.
+- `mark_order_paid` creates a payment collection for the outstanding amount when the order has none (e.g. a converted draft order).
+- Fulfillment tools report the order's fulfillment status after the change.
+- `delete_variant` removes the variant's unreserved inventory item, and `delete_promotion` removes the campaign `create_promotion` made for its dates.
+
+### Changed
+
+- Tools are split into modules under `src/tools/`.
+
 ## [0.2.2] – 2026-10-01
 
 ### Added

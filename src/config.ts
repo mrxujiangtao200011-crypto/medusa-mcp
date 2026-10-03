@@ -31,6 +31,8 @@ export function loadMedusaConfig() {
     apiKey: secretKey(),
     /** When true, write tools are not registered at all. */
     readOnly: bool("MEDUSA_READ_ONLY", false),
+    /** Generic medusa_request tool for endpoints without a dedicated tool (GET only when read-only). */
+    rawApi: bool("MEDUSA_RAW_API", true),
     timeoutMs: Number(process.env.MEDUSA_TIMEOUT_MS ?? 20000),
   };
 }

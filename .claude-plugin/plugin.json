@@ -1,8 +1,8 @@
 {
   "name": "medusa",
   "displayName": "Medusa",
-  "version": "0.2.2",
-  "description": "Work with a Medusa v2 store: orders, customers, products, inventory, sales reports and safe write actions.",
+  "version": "0.3.0",
+  "description": "Manage a Medusa v2 store: orders, payments, returns, products, catalog, inventory, promotions, price lists and sales reports.",
   "author": {
     "name": "Pavel Trhoň",
     "url": "https://github.com/trhonpavel"
@@ -23,7 +23,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "medusa-mcp@0.2.2",
+        "medusa-mcp@0.3.0",
         "stdio"
       ],
       "env": {
@@ -51,7 +51,7 @@
     "read_only": {
       "type": "boolean",
       "title": "Read-only",
-      "description": "Only register read and report tools. Turn off to allow fulfilling, shipping, canceling and editing.",
+      "description": "Only register read and report tools. Turn off to allow fulfilling, refunding, editing products, promotions and more.",
       "default": true
     },
     "report_timezone": {

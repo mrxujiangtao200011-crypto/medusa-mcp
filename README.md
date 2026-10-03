@@ -2,7 +2,7 @@
 
 🇨🇿 [Česky](README.cs.md)
 
-An [MCP](https://modelcontextprotocol.io) server for the **Medusa v2 Admin API**. It gives Claude (or any MCP client) access to orders, customers, products and inventory, computes sales reports, and performs a small set of carefully scoped write actions.
+An [MCP](https://modelcontextprotocol.io) server for the **Medusa v2 Admin API**. It gives Claude (or any MCP client) access to orders, customers, products and inventory, computes sales reports, and manages the store – fulfillment, payments and refunds, returns, draft orders, products and variants, catalog, promotions and price lists – with guard rails on destructive actions.
 
 It runs in two modes:
 
@@ -13,26 +13,48 @@ It is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as 
 
 ## Tools
 
-| Tool | What it does | Kind |
-|---|---|---|
-| `get_store_info` | regions and currencies, sales channels, stock locations | read |
-| `list_orders` | orders – full-text, date range, customer, order/payment/fulfillment status | read |
-| `get_order` | full order detail by ID or order number (`1042`, `#1042`) | read |
-| `list_customers` / `get_customer` | customers, order history, total spent | read |
-| `list_products` / `get_product` | products, variants, prices, linked inventory items | read |
-| `list_inventory` | stock per location, `low_stock_threshold` to find what's running out | read |
-| `sales_report` | revenue, AOV, units, unique customers, day/week/month series, top products | report |
-| `create_fulfillment` | fulfill an order (defaults: all remaining items, the only stock location) | write |
-| `create_shipment` | mark as shipped with a tracking number | write |
-| `complete_order` | mark an order as completed | write |
-| `cancel_order` | cancel an order (`destructiveHint`) | write |
-| `update_product` | title, description, status, handle, metadata | write |
-| `delete_product` | delete a product and its variants, plus their unreserved inventory items; requires `confirm_title` (`destructiveHint`) | write |
-| `set_variant_price` | set a variant's base price in one currency – all other prices, including ones with price rules, are preserved | write |
-| `set_stock_level` | restock by SKU, absolute or relative (`adjust_by: +10`) | write |
+48 tools that cover day-to-day store management. Anything else is reachable through `medusa_request`.
 
-Amounts are in major currency units (Medusa v2 does not store minor units). Plain dates in filters (`2026-09-01`) are interpreted in `REPORT_TIMEZONE` (default `UTC`).
-With `MEDUSA_READ_ONLY=true` the write tools are not registered at all.
+**Read and report**
+
+| Tool | What it does |
+|---|---|
+| `get_store_info` | regions and currencies, sales channels, stock locations, shipping options and profiles, return and refund reasons |
+| `list_orders` / `get_order` | orders by full-text, date range, customer or status; full detail by ID or order number (`1042`, `#1042`) including payments, refunds and returns |
+| `list_customers` / `get_customer` | customers (also by group), order history, total spent |
+| `list_customer_groups` | customer groups |
+| `list_products` / `get_product` | products by status, collection, category or tag; variants, options, prices, inventory items |
+| `list_catalog` | categories (tree), collections, tags, product types |
+| `list_inventory` | stock per location, `low_stock_threshold` to find what's running out |
+| `list_promotions` | discount codes with value, conditions, usage and validity |
+| `list_price_lists` | sales and customer-group price lists, with their prices |
+| `sales_report` | revenue, AOV, units, unique customers, day/week/month series, top products |
+
+**Write** (not registered with `MEDUSA_READ_ONLY=true`)
+
+| Area | Tools |
+|---|---|
+| Fulfillment | `create_fulfillment` (defaults: all remaining items, the only stock location), `create_shipment` (tracking number), `mark_delivered`, `cancel_fulfillment` |
+| Orders | `update_order` (email, addresses, metadata), `complete_order`, `cancel_order` |
+| Payments | `mark_order_paid` (bank transfer, cash on delivery), `capture_payment`, `refund_payment` (checks the refundable amount) |
+| Returns | `create_return` (defaults to every shipped item), `receive_return` (puts goods back in stock) |
+| Draft orders | `create_draft_order` (items by variant or SKU, custom prices, shipping), `convert_draft_order` |
+| Products | `create_product` (simple or with options and variants, initial stock, defaults for sales channel and shipping profile), `update_product`, `delete_product` (requires `confirm_title`) |
+| Variants | `create_variant` (adds new option values automatically), `update_variant`, `delete_variant` (requires `confirm`), `set_variant_price` (keeps all other prices) |
+| Catalog | `save_category`, `delete_category`, `save_collection`, `delete_collection` (create or update, add/remove products) |
+| Inventory | `set_stock_level` (absolute or `adjust_by: +10`, adds the item to a new location) |
+| Customers | `save_customer` (create/update, address, groups), `save_customer_group`, `delete_customer_group` |
+| Promotions | `create_promotion` (percentage, fixed or free shipping; products, categories, collections, customer groups; dates and usage limit), `update_promotion`, `delete_promotion` |
+| Price lists | `save_price_list` (sales and B2B prices, upserts prices by variant or SKU), `delete_price_list` |
+
+**Generic**
+
+| Tool | What it does |
+|---|---|
+| `medusa_request` | any Admin API endpoint (`GET`, `POST`, `DELETE` under `/admin/`) for things without a dedicated tool – reservations, order edits, exchanges, tax rates… Read-only mode allows `GET` only; writes to `api-keys`, `users` and `invites` are always blocked. Turn it off with `MEDUSA_RAW_API=false`. |
+
+Amounts are in major currency units (Medusa v2 does not store minor units). Plain dates (`2026-09-01`) are interpreted in `REPORT_TIMEZONE` (default `UTC`).
+Destructive tools (cancel, delete, refund, capture, `medusa_request`) carry `destructiveHint`, so clients ask before running them.
 
 ## 1. Create a Medusa API key
 
@@ -127,6 +149,7 @@ claude mcp add --transport http medusa https://mcp.example.com/mcp \
 | `MEDUSA_BACKEND_URL` | yes | | Medusa backend URL |
 | `MEDUSA_API_KEY` | yes | | Secret API key (`sk_…`) |
 | `MEDUSA_READ_ONLY` | | `false` | Register read and report tools only |
+| `MEDUSA_RAW_API` | | `true` | Register the generic `medusa_request` tool (GET only when read-only) |
 | `REPORT_TIMEZONE` | | `UTC` | IANA timezone for date filters and report buckets |
 | `MEDUSA_TIMEOUT_MS` | | `20000` | Timeout for Medusa requests |
 | `PUBLIC_URL` | HTTP | | Public HTTPS origin of this server (without `/mcp`) |
@@ -156,7 +179,8 @@ claude mcp add --transport http medusa https://mcp.example.com/mcp \
 - Dynamic Client Registration only accepts redirect URIs on `ALLOWED_REDIRECT_HOSTS`, so an arbitrary app cannot register its own callback and phish a token.
 - Authorization codes are single-use, expire after 5 minutes, and PKCE S256 is mandatory.
 - The consent page sends `Content-Security-Policy: default-src 'none'` and `X-Frame-Options: DENY`, and compares the password in constant time.
-- Write tools are not marked `readOnlyHint` and `cancel_order` / `delete_product` carry `destructiveHint`, so clients like Claude ask for approval before running them.
+- Write tools are not marked `readOnlyHint`, and tools that cancel, delete or move money carry `destructiveHint`, so clients like Claude ask for approval before running them.
+- `medusa_request` only reaches `/admin/…` paths, never writes to `api-keys`, `users` or `invites` (so a prompt injection cannot mint new credentials), and can be disabled with `MEDUSA_RAW_API=false`.
 - Set `TRUST_PROXY` to the number of reverse proxies in front of the server, otherwise rate limiting only sees the proxy's IP.
 
 See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
